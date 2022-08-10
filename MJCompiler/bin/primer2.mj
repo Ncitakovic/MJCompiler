@@ -1,0 +1,7 @@
+program test302
+    int aa, 123;
+{
+	void main() {
+		
+	}
+}

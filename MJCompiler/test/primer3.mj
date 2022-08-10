@@ -1,0 +1,27 @@
+program Nikola
+
+int x, y[];
+char g;
+const int pi = 3;
+const bool rr = true; 
+
+{
+
+void main() int a, b[];{
+		print(x);
+		b = new int[5];	
+		b[2] = -2;
+		print(b[2]);
+		x = (5 - 3) * 6 % 7;
+		x = 5;
+		x++;
+		print(x);
+		read(x);
+		print(x);
+		print(x);
+		print(x);
+		a = 3;
+		a--;
+		print(a);		
+	}
+}

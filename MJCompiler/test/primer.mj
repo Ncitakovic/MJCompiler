@@ -1,0 +1,25 @@
+program Nikola
+
+const int PI = 3;
+
+int a, b;
+char niz[];
+
+{
+	void main() int x, y;
+	{
+		niz = new char[5];
+		niz[0] = 'a';
+		niz[1] = 'b';
+		niz[2] = 'c';
+		niz[3] = 'd';
+		niz[4] = 'e';
+		print(niz[1]);
+		x = 0;
+		y = 2;
+		x = x + y;
+											
+	}
+}
+
+

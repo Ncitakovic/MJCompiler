@@ -1,0 +1,249 @@
+
+package rs.ac.bg.etf.pp1;
+
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+parser code {:
+
+	boolean errorDetected;
+	
+	Logger log = Logger.getLogger(getClass());
+   
+   
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+     
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+  
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+  
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	errorDetected = true;
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+
+
+:}
+
+init with {:
+	errorDetected = false;
+:}
+
+scan with {:
+	Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+terminal PROG, ELSE, CONST, IF, NEW, PRINT, READ, RETURN, VOID;
+terminal ADD, SUB, MUL, DIV, MOD, EQUAL_TO, NOT_EQUAL_TO, GREATER_THAN, GREATER_THAN_OR_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, LOGICAL_AND, LOGICAL_OR;
+terminal EQUAL, INC, DEC, SEMICOLON, COMMA, DOT, LPAREN, RPAREN, LSQUARE, RSQUARE, LBRACE, RBRACE, QUESTION_MARK, COLON;
+terminal String IDENT;
+terminal Integer NUM_CONST, BOOL_CONST;
+terminal Character CHAR_CONST;
+terminal GOTO;
+
+nonterminal Program, ConVarDeclList, ConstDeclList, VarDeclList, ConstDecl, ConstDeclMore, Const;
+nonterminal MethodDecl;
+nonterminal VarDecl, VarDeclMore, VarDeclListMore, StatementList, Statement, DesignatorStatement;
+nonterminal Assignop, Relop, Addop, Mulop, CondFact, CondTerm, Condition;
+nonterminal Label, Statements, SingleStatement; 
+
+nonterminal LabelGoto;
+
+
+nonterminal ProgramName, Minus;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type, Factor, FactorSub ,MulopFactorList, Term, AddopTermList, Expr;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorArrayName, Designator, MethodName;
+
+Program ::= (Program) PROG ProgramName ConVarDeclList LBRACE MethodDecl RBRACE;
+
+ProgramName ::= (ProgramName) IDENT ;
+
+ConVarDeclList ::= 	(ConVarDeclListCon) ConVarDeclList ConstDeclList
+					|
+					(ConVarDeclListVar) ConVarDeclList VarDeclList
+					|
+					(ConVarDeclListEpsilon) /* epsilon */
+					;
+					
+ConstDeclList ::= (ConstDeclList) CONST Type ConstDecl ConstDeclMore SEMICOLON ;
+
+
+ConstDecl ::= (ConstDecl) IDENT EQUAL Const ;
+
+Const ::= (NumConst) NUM_CONST | (BoolConst) BOOL_CONST | (CharConst) CHAR_CONST ;
+
+ConstDeclMore ::= 	(ConstDeclMoreComma) COMMA ConstDecl ConstDeclMore
+					|
+					(ConstDeclMoreEpsilon) /* epsilon */
+					;
+
+
+VarDeclList ::= (VarDeclList) Type VarDecl VarDeclMore SEMICOLON ; 
+
+
+VarDecl ::= (VarDeclIdent) IDENT  
+			|
+			(VarDeclIdentSquare) IDENT LSQUARE RSQUARE 
+			; 
+
+
+VarDeclMore ::= (VarDeclMoreComma) COMMA VarDecl VarDeclMore 
+				|
+				(VarDeclMoreEpsilon) /* epsilon */
+				; 
+
+
+MethodDecl ::= (MethodDecl) VOID MethodName LPAREN RPAREN VarDeclListMore Statements;
+
+MethodName ::= (MethodName) IDENT;
+
+Type ::= (Type) IDENT;
+
+VarDeclListMore ::= (VarDeclListMoreRec) VarDeclListMore VarDeclList
+					|
+					(VarDeclListEpsilon) /* epsilon */
+					;
+
+StatementList ::= (StatementListRecursion) StatementList Statement
+				   |										   
+				  (StatementListEpsilon) /* epsilon */
+				   ;
+
+Statement ::= (StatementSingleStatement) SingleStatement
+			  |
+			  (StatementSingleStatementLabel) Label COLON SingleStatement   
+			  |
+			  (StatementStatements) Statements
+			  ;
+
+LabelGoto ::= (LabelGoto) IDENT;
+
+SingleStatement ::= (SingleStatementDes) DesignatorStatement SEMICOLON
+			  |
+			  (SingleStatementRet) RETURN SEMICOLON
+			  |
+			  (SingleStatementRead) READ LPAREN Designator RPAREN SEMICOLON
+			  |
+			  (SingleStatementPrint) PRINT LPAREN Expr RPAREN SEMICOLON
+			  |
+			  (SingleStatementPrintNumConst) PRINT LPAREN Expr COMMA NUM_CONST RPAREN SEMICOLON
+			  |
+			  (SingleStatementGoto) GOTO LabelGoto SEMICOLON 
+			  ;	
+
+Statements ::= (Statements) LBRACE StatementList RBRACE;
+			     		
+DesignatorStatement ::= (DesignatorStatementAssign) Designator Assignop Expr
+						|
+						(DesignatorStatementInc) Designator INC 
+						|
+						(DesignatorStatementDec) Designator DEC
+						;
+
+Condition ::= (ConditionLogOr) Condition LOGICAL_OR CondTerm
+			 |
+			 (ConditionCondTerm) CondTerm
+			 ;
+
+CondTerm ::= (CondTermLogAnd) CondTerm LOGICAL_AND CondFact
+			 |
+			 (CondTermCondFact) CondFact
+			 ;
+			 
+CondFact ::= (CondFactExpr) Expr
+			 |
+			 (CondFactExprRelop) Expr Relop Expr
+			 ;
+
+Expr ::= (Expr)  AddopTermList
+		 ;
+		 
+AddopTermList ::= 	(AddopTermListMore) AddopTermList Addop Term
+					|
+					(AddopTermListFirst) Term
+					;
+   
+
+Term ::= (Term) MulopFactorList
+		 ;
+
+MulopFactorList ::= (MulopFactorListMore) MulopFactorList Mulop Factor
+					|
+					(MulopFactorListFirst) Factor
+					;
+					
+Factor ::= (Factor) Minus FactorSub;
+
+Minus ::= (MinusYes) SUB | (MinusNo) ;
+
+FactorSub ::= 
+		   (FactorDesignator) Designator
+		   |
+		   (FactorNumConst) NUM_CONST
+		   |
+		   (FactorCharConst) CHAR_CONST
+		   |
+		   (FactorBoolConst) BOOL_CONST
+		   |		   
+		   (FactorNewTypeSquare) NEW Type LSQUARE Expr RSQUARE
+		   |
+		   (FactorParensExpr) LPAREN Expr RPAREN
+		   ;   
+
+Designator ::= (DesignatorIdent) IDENT
+			   |
+			   (DesignatorIdentSquare) DesignatorArrayName LSQUARE Expr RSQUARE
+			   ;
+			   
+DesignatorArrayName ::= (DesignatorArrayName) IDENT;
+
+Label ::= (Label) IDENT;
+
+
+Assignop ::= (Assignop) EQUAL;
+
+Relop ::= (RelopEqualTo) EQUAL_TO
+		  |
+		  (RelopNotEqualTo) NOT_EQUAL_TO
+		  |
+		  (RelopGreaterThan) GREATER_THAN
+		  |
+		  (RelopGreaterThanOrEqual) GREATER_THAN_OR_EQUAL
+		  |
+		  (RelopLessThan) LESS_THAN
+		  |
+		  (RelopLessThanOrEqual) LESS_THAN_OR_EQUAL
+		  ;
+
+Addop ::= (AddopPlus) ADD
+		  |
+		  (AddopMinus) SUB
+		  ;
+
+Mulop ::= (MulopMul) MUL
+		  |		  
+		  (MulopDiv) DIV
+		  |
+		  (MulopMod) MOD
+		  ;
+
+
+
+		
+
